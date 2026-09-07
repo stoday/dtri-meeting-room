@@ -1,0 +1,19 @@
+[project]
+name = "p2026-meeting-room"
+version = "0.1.0"
+description = "Internal meeting-room availability and reservation CLI"
+readme = "README.md"
+authors = [
+    { name = "stoday", email = "stoday@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "playwright==1.62.0",
+]
+
+[project.scripts]
+dtri-meeting-room = "p2026_meeting_room.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

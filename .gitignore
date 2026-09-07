@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Playwright's isolated, authenticated browser profile. Never commit it.
+.dtri-meeting-room/
+
+# Local meeting-room exports and any manually supplied credentials.
+# The committed example snapshot is deliberately the only exception.
+data/*.html
+data/*.private.json
+!data/current_week.json
+
+# Local output from graphify, which is not needed for the project to function.
+data
+graphify-out
