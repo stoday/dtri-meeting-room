@@ -4,6 +4,7 @@ import argparse
 from datetime import date
 import json
 from pathlib import Path
+import shutil
 from typing import Any
 
 from .browser import (
@@ -18,6 +19,14 @@ from .browser import (
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SNAPSHOT = ROOT / "data" / "current_week.json"
 DEFAULT_RESERVATION_CAPTURE = ROOT / "data" / "reservation-flow.private.json"
+SKILL_NAME = "dtri-meeting-room"
+SKILL_SOURCE = Path(__file__).parent / "skills" / SKILL_NAME / "SKILL.md"
+PLATFORM_SKILL_ROOTS = {
+    "codex": ROOT / ".codex" / "skills",
+    "antigravity": ROOT / ".agents" / "skills",
+    "claude": ROOT / ".claude" / "skills",
+    "anthropic": ROOT / ".claude" / "skills",
+}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -81,6 +90,10 @@ def main() -> None:
     reserve.set_defaults(handler=_reserve)
     cancel = commands.add_parser("cancel", help="List your reservations and select one to cancel")
     cancel.set_defaults(handler=_pending_write)
+    install_skill = commands.add_parser("install-skill", help="Install this project's Agent Skill into a skills root")
+    install_skill.add_argument("destination", help="A skills-root path, or one of: codex, antigravity, claude")
+    install_skill.add_argument("--force", action="store_true", help="Replace an existing SKILL.md at the destination")
+    install_skill.set_defaults(handler=_install_skill)
     args = parser.parse_args()
     args.handler(args)
 
@@ -118,6 +131,24 @@ def _pending_write(args: argparse.Namespace) -> None:
     raise SystemExit(
         f"{args.command} is defined but not enabled yet: the official form submission flow is still being mapped."
     )
+
+
+def _skill_destination(destination: str) -> Path:
+    """Resolve a platform preset or custom skills-root path to this skill's folder."""
+    skills_root = PLATFORM_SKILL_ROOTS.get(destination.lower(), Path(destination))
+    return skills_root.resolve() / SKILL_NAME
+
+
+def _install_skill(args: argparse.Namespace) -> None:
+    if not SKILL_SOURCE.is_file():
+        raise SystemExit(f"Packaged skill source is missing: {SKILL_SOURCE}")
+    skill_directory = _skill_destination(args.destination)
+    target = skill_directory / "SKILL.md"
+    if target.exists() and not args.force:
+        raise SystemExit(f"Refusing to overwrite existing skill: {target}. Re-run with --force to replace it.")
+    skill_directory.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SKILL_SOURCE, target)
+    print(f"Installed {SKILL_NAME} to {target}")
 
 
 def _reserve(args: argparse.Namespace) -> None:

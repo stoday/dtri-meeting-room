@@ -16,11 +16,41 @@
 
 ## 安裝
 
+### 本機開發安裝
+
 在 PowerShell 中進入專案根目錄後：
 
 ```powershell
 . .\.venv\Scripts\Activate.ps1
 uv pip install --python .\.venv\Scripts\python.exe -e .
+python -m playwright install chromium
+```
+
+### 從 Git repository 安裝
+
+將套件加入另一個 uv 專案的依賴時，使用 `uv add`。請將網址替換為可
+`git clone` 的 repository URL：
+
+```powershell
+uv add git+https://github.com/<owner>/<repo>.git
+```
+
+直接以 pip 安裝時：
+
+```powershell
+python -m pip install git+https://github.com/<owner>/<repo>.git
+```
+
+建議固定 tag 或 commit，讓安裝可重現：
+
+```powershell
+uv add git+https://github.com/<owner>/<repo>.git --tag v0.1.0
+python -m pip install git+https://github.com/<owner>/<repo>.git@v0.1.0
+```
+
+以上兩種方式安裝完成後，仍需執行一次 Playwright 瀏覽器安裝：
+
+```powershell
 python -m playwright install chromium
 ```
 
@@ -77,6 +107,30 @@ dtri-meeting-room login --capture-reservation
 登入後，在開啟的瀏覽器中手動完成一筆你確定要建立的預約，看到「預借成功」後按確認並關閉瀏覽器。程式會將去識別化的請求摘要寫入 `data/reservation-flow.private.json`，供程式使用目前的動態 `SaveBorrow` handler。
 
 這份私有檔案與瀏覽器設定檔都由 `.gitignore` 排除；其中不會記錄 cookie、token、密碼、`__VIEWSTATE` 或 event validation。更完整的觀察內容請見 [docs/reservation-api-observation.md](docs/reservation-api-observation.md)。
+
+## 安裝 Agent Skill
+
+將此專案附帶的 `dtri-meeting-room` Skill 安裝至專案本機的 Agent skills 目錄：
+
+```powershell
+dtri-meeting-room install-skill codex
+dtri-meeting-room install-skill antigravity
+dtri-meeting-room install-skill claude
+```
+
+三個預設目標分別為 `.codex/skills/`、`.agents/skills/` 與 `.claude/skills/`。也可以指定自訂的 skills 根目錄；指令會在其中建立 `dtri-meeting-room/SKILL.md`：
+
+```powershell
+dtri-meeting-room install-skill C:\my-agent\skills
+```
+
+若目標已有 `SKILL.md`，指令會拒絕覆寫。確認要更新時，加入 `--force`：
+
+```powershell
+dtri-meeting-room install-skill codex --force
+```
+
+`anthropic` 可作為 `claude` 的相容別名。
 
 ## 限制與安全原則
 

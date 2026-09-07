@@ -14,6 +14,7 @@ reservation, and cancelling one of the caller's reservations.
 | `dtri-meeting-room view [--refresh]` | Displays room occupancy from the local snapshot; `--refresh` updates it through the saved Playwright profile first. | `--refresh` updates local snapshot |
 | `dtri-meeting-room reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM>` | Shows the exact intended reservation and requests an explicit `YES` before submitting it. | Creates reservation after confirmation |
 | `dtri-meeting-room cancel` | Lists the caller's reservations with short sequential numbers; asks for a selection and an explicit `YES` before cancellation. | Cancels reservation after confirmation |
+| `dtri-meeting-room install-skill <path\|codex\|antigravity\|claude>` | Installs the packaged `dtri-meeting-room` Agent Skill into a custom skills root or project-local platform preset. | Creates or replaces a local `SKILL.md` only with `--force`; `anthropic` is a compatibility alias for `claude` |
 
 ## Safety and persistence
 
