@@ -21,6 +21,7 @@ DEFAULT_SNAPSHOT = ROOT / "data" / "current_week.json"
 DEFAULT_RESERVATION_CAPTURE = ROOT / "data" / "reservation-flow.private.json"
 SKILL_NAME = "dtri-meeting-room"
 SKILL_SOURCE = Path(__file__).parent / "skills" / SKILL_NAME / "SKILL.md"
+DEFAULT_RESERVATION_REASON = "工作進度討論"
 PLATFORM_SKILL_ROOTS = {
     "codex": ROOT / ".codex" / "skills",
     "antigravity": ROOT / ".agents" / "skills",
@@ -87,6 +88,12 @@ def main() -> None:
     reserve.add_argument("room_id", help="Room number, for example 801")
     reserve.add_argument("date", type=_iso_date, help="Required YYYY-MM-DD date")
     reserve.add_argument("period", type=_period, help="Required HH:MM-HH:MM period")
+    reserve.add_argument("--reason", help=f"Meeting reason (default: {DEFAULT_RESERVATION_REASON})")
+    reserve.add_argument(
+        "--confirm",
+        choices=("YES",),
+        help="Submit without interactive prompts; requires the exact value YES",
+    )
     reserve.set_defaults(handler=_reserve)
     cancel = commands.add_parser("cancel", help="List your reservations and select one to cancel")
     cancel.set_defaults(handler=_pending_write)
@@ -152,7 +159,10 @@ def _install_skill(args: argparse.Namespace) -> None:
 
 
 def _reserve(args: argparse.Namespace) -> None:
-    reason = input("會議事由 [工作進度討論]: ").lstrip("\ufeff").strip() or "工作進度討論"
+    if args.confirm == "YES":
+        reason = args.reason or DEFAULT_RESERVATION_REASON
+    else:
+        reason = args.reason or input(f"會議事由 [{DEFAULT_RESERVATION_REASON}]: ").lstrip("\ufeff").strip() or DEFAULT_RESERVATION_REASON
     start, end = args.period
     plan = prepare_reservation(
         ROOT, room_number=args.room_id, booking_date=args.date, start=start, end=end, reason=reason
@@ -161,7 +171,7 @@ def _reserve(args: argparse.Namespace) -> None:
     print(f"  會議室: {plan.room_number} (server ID: {plan.itemno})")
     print(f"  時間: {plan.booking_date} {plan.start}-{plan.end}")
     print(f"  事由: {plan.reason}")
-    if input("輸入 YES 以送出預約: ").lstrip("\ufeff").strip() != "YES":
+    if args.confirm != "YES" and input("輸入 YES 以送出預約: ").lstrip("\ufeff").strip() != "YES":
         print("已取消，未送出任何預約請求。")
         return
     try:
