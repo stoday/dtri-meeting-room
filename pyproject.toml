@@ -1,5 +1,5 @@
 [project]
-name = "p2026-meeting-room"
+name = "dtri-meeting-room"
 version = "0.1.0"
 description = "Internal meeting-room availability and reservation CLI"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dtri-meeting-room = "p2026_meeting_room.cli:main"
+dtri-meeting-room = "dtri_meeting_room.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
