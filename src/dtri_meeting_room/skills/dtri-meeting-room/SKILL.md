@@ -1,25 +1,25 @@
 ---
 name: dtri-meeting-room
-description: Operate the P2026 internal meeting-room CLI for login, availability viewing, and user-confirmed reservations. Use when a user asks to inspect or reserve a company meeting room with this project.
+description: 操作數位轉型研究院（數轉院）的內部會議室 CLI，進行登入、可用時段查詢與需使用者確認的預約。使用者要透過此專案查詢或預約數轉院會議室時使用。
 ---
 
-# DTRI Meeting Room
+# 數位轉型研究院（數轉院）會議室
 
-Run `dtri-meeting-room` from this project after activating its virtual environment.
+啟動此專案的虛擬環境後，在專案目錄中執行 `dtri-meeting-room`。
 
-## Availability and login
+## 可用時段與登入
 
-- `view` lists **available** periods, not booked periods. Use `view --refresh` when current website data matters.
-- `login` opens the project's isolated Playwright profile. The user completes login manually.
-- Never inspect, print, export, or commit browser cookies, sessions, tokens, passwords, or ASP.NET hidden state. The profile is `.dtri-meeting-room/profile/` and is intentionally Git-ignored.
+- `view` 顯示的是**可借時段**，不是已預約時段。需要最新網站資料時，使用 `view --refresh`。
+- `login` 會開啟此專案獨立的 Playwright 設定檔，登入必須由使用者手動完成。
+- 不得檢視、輸出、匯出或提交瀏覽器 cookie、工作階段、token、密碼或 ASP.NET 隱藏欄位。設定檔位於 `.dtri-meeting-room/profile/`，且刻意設為 Git 忽略。
 
-## Reservation
+## 預約
 
-- Require `reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM>`; do not infer a date.
-- Tell the user that an empty meeting reason uses `工作進度討論`.
-- The CLI rechecks the target interval before submission and asks for exact uppercase `YES`. Do not bypass that confirmation or retry a failed write automatically.
-- A successful reservation is confirmed by the server's `Borrowed` response table. If the response is not recognized, treat the result as uncertain and ask the user to verify it on the intranet.
+- 必須使用 `reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM>`，不可自行推定日期。
+- 使用者未填寫會議事由時，CLI 會使用預設的「工作進度討論」。
+- CLI 會在送出前重新檢查目標時段，並要求完全大寫的 `YES`。不得略過此確認，亦不可自動重試失敗的寫入操作。
+- 伺服器回應中的 `Borrowed` 結果表代表預約成功。若無法辨識回應，應將結果視為未確定，並請使用者在內網系統確認。
 
-## Scope
+## 範圍
 
-`cancel` is not implemented yet. Do not claim that a cancellation was made or invent a cancellation flow.
+`cancel` 尚未實作。不得宣稱已取消預約，也不得虛構取消流程。
