@@ -45,10 +45,10 @@ at run time; it must not be hard-coded.
 
 ## Direct reservation design
 
-The future `reserve` implementation should use the saved Playwright profile,
-re-check availability/rules immediately before submission, discover the current
-SaveBorrow handler, then require an exact uppercase `YES` before the final
-POST.
+`reserve` uses the saved Playwright profile, re-checks availability immediately
+before submission, discovers the current SaveBorrow handler from the currently
+loaded authenticated page, then runs the observed rule checks before the final
+POST. It does not persist the handler or a captured request.
 
 ## Observed success contract
 

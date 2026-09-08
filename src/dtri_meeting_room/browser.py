@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from dataclasses import dataclass
-import json
 from pathlib import Path
 import re
 from typing import Any
-from urllib.parse import parse_qsl
 from urllib.parse import parse_qs, urlparse, urlunparse
 
 from playwright.sync_api import BrowserContext, sync_playwright
@@ -18,9 +16,8 @@ MEETING_URL = "https://intranet.ideas.iii.org.tw:8242/default.aspx"
 DATE = re.compile(r"^\d{4}/\d{2}/\d{2}$")
 ROOM = re.compile(r"^(\d+)\s*會議室\s*(.*)$")
 TIME_RANGE = re.compile(r"\b\d{2}:\d{2}-\d{2}:\d{2}\b")
-SENSITIVE_FIELD = re.compile(r"cookie|token|secret|password|authorization|viewstate|eventvalidation", re.IGNORECASE)
-SENSITIVE_RESPONSE = re.compile(r"(?i)(cookie|token|secret|password|authorization)=[^\s&<]+")
-CAPTURED_REQUEST_HEADERS = {"content-type", "x-ajaxpro-method", "x-requested-with", "referer", "origin", "accept"}
+SAVE_BORROW_HANDLER = re.compile(r"/ajax/_Default,App_Web_[^/?\s\"'<>]+\.ashx$")
+AJAX_SESSION = "rw"
 
 
 class AuthenticationRequired(RuntimeError):
@@ -39,7 +36,6 @@ class ReservationPlan:
     start: str
     end: str
     reason: str
-    endpoint: str
 
 
 def profile_path(project_root: Path) -> Path:
@@ -62,9 +58,9 @@ def reservation_payload(plan: ReservationPlan) -> str:
     )
 
 
-def reservation_preflight_requests(plan: ReservationPlan) -> list[tuple[str, str, str]]:
+def reservation_preflight_requests(plan: ReservationPlan, endpoint: str) -> list[tuple[str, str, str]]:
     """Build the browser-observed rule-check sequence preceding SaveBorrow."""
-    parsed = urlparse(plan.endpoint)
+    parsed = urlparse(endpoint)
     query = parse_qs(parsed.query)
     session = query.get("_session", ["rw"])[0]
     handler = urlunparse((parsed.scheme, parsed.netloc, "/ajax/Pub,App_Code.ashx", "", "", ""))
@@ -120,15 +116,20 @@ def reservation_succeeded(status: int, response_text: str) -> bool:
     return status == 200 and re.search(r"id=(?:\\)?['\"]Borrowed(?:\\)?['\"]", response_text) is not None
 
 
-def _save_borrow_endpoint(project_root: Path) -> str:
-    capture_path = project_root / "data" / "reservation-flow.private.json"
-    if not capture_path.exists():
-        raise RuntimeError("No reservation handler has been captured. Run 'dtri-meeting-room login --capture-reservation' first.")
-    capture = json.loads(capture_path.read_text(encoding="utf-8"))
-    endpoint = next((item["url"] for item in reversed(capture["requests"]) if "_method=SaveBorrow" in item["url"]), None)
-    if endpoint is None:
-        raise RuntimeError("The reservation capture does not contain a SaveBorrow request.")
-    return endpoint
+def _current_save_borrow_endpoint(page: Any) -> str:
+    """Read the deployment-generated SaveBorrow handler from the current authenticated page."""
+    script_sources = page.evaluate("""() => [...document.scripts].map(script => script.src).filter(Boolean)""")
+    current = urlparse(page.url)
+    for source in script_sources:
+        handler = urlparse(source)
+        if (
+            handler.scheme != current.scheme
+            or handler.netloc != current.netloc
+            or SAVE_BORROW_HANDLER.fullmatch(handler.path) is None
+        ):
+            continue
+        return urlunparse((handler.scheme, handler.netloc, handler.path, "", f"_method=SaveBorrow&_session={AJAX_SESSION}", ""))
+    raise RuntimeError("The current authenticated page did not expose a SaveBorrow handler. Run 'dtri-meeting-room login' and try again.")
 
 
 def _room_itemnos(context: BrowserContext) -> dict[str, str]:
@@ -170,7 +171,7 @@ def prepare_reservation(
     date_index = snapshot["week_dates"].index(requested_date)
     if not interval_is_available(room["available_periods"][date_index], start, end):
         raise ValueError(f"{room_number} is not available for {booking_date} {start}-{end}")
-    return ReservationPlan(room_number, itemno, booking_date, start, end, reason, _save_borrow_endpoint(project_root))
+    return ReservationPlan(room_number, itemno, booking_date, start, end, reason)
 
 
 def submit_reservation(project_root: Path, plan: ReservationPlan) -> tuple[int, str]:
@@ -180,34 +181,21 @@ def submit_reservation(project_root: Path, plan: ReservationPlan) -> tuple[int, 
         try:
             page = context.pages[0] if context.pages else context.new_page()
             page.goto(MEETING_URL, wait_until="domcontentloaded")
-            for endpoint, payload, success_marker in reservation_preflight_requests(plan):
-                check_status, check_text = _browser_ajax_post(page, endpoint, payload)
+            endpoint = _current_save_borrow_endpoint(page)
+            for preflight_endpoint, payload, success_marker in reservation_preflight_requests(plan, endpoint):
+                check_status, check_text = _browser_ajax_post(page, preflight_endpoint, payload)
                 if check_status != 200 or success_marker not in check_text:
                     raise ReservationPreflightFailed(
-                        f"{endpoint.rsplit('_method=', maxsplit=1)[-1].split('&', maxsplit=1)[0]} "
+                        f"{preflight_endpoint.rsplit('_method=', maxsplit=1)[-1].split('&', maxsplit=1)[0]} "
                         f"failed ({check_status}): {' '.join(check_text.split())[:240]}"
                     )
-            return _browser_ajax_post(page, plan.endpoint, reservation_payload(plan))
+            return _browser_ajax_post(page, endpoint, reservation_payload(plan))
         finally:
             context.close()
 
 
 def _clean(value: str) -> str:
     return " ".join(value.replace("\xa0", " ").split())
-
-
-def summarize_form_payload(post_data: str | None) -> list[dict[str, str]]:
-    """Record semantic form fields while redacting Web Forms state and secrets."""
-    if not post_data:
-        return []
-    if "\n" in post_data or "\r" in post_data:
-        pairs = [tuple(line.split("=", maxsplit=1)) for line in post_data.splitlines() if "=" in line]
-    else:
-        pairs = parse_qsl(post_data, keep_blank_values=True)
-    return [
-        {"name": name, "value": "[REDACTED]" if SENSITIVE_FIELD.search(name) else value}
-        for name, value in pairs
-    ]
 
 
 def snapshot_from_rows(rows: list[list[str]], *, source_url: str, retrieved_at: str) -> dict[str, Any]:
@@ -277,52 +265,13 @@ def refresh_snapshot(project_root: Path, *, headless: bool = True) -> dict[str, 
     return snapshot_from_rows(rows, source_url=MEETING_URL, retrieved_at=datetime.now(UTC).isoformat())
 
 
-def login_and_refresh(project_root: Path, *, capture_path: Path | None = None) -> dict[str, Any]:
+def login_and_refresh(project_root: Path) -> dict[str, Any]:
     """Open the isolated browser for manual login and wait until the schedule is visible."""
     profile = profile_path(project_root)
     profile.parent.mkdir(parents=True, exist_ok=True)
-    captured_requests: list[dict[str, Any]] = []
-    captured_responses: list[dict[str, Any]] = []
     with sync_playwright() as playwright:
         context = playwright.chromium.launch_persistent_context(str(profile), headless=False)
         try:
-            if capture_path:
-                def record_request(request: Any) -> None:
-                    if request.method != "POST" or not request.url.startswith("https://intranet.ideas.iii.org.tw:8242/"):
-                        return
-                    captured_requests.append(
-                        {
-                            "method": request.method,
-                            "url": request.url,
-                            "content_type": request.headers.get("content-type", ""),
-                            "headers": {
-                                name: value
-                                for name, value in request.headers.items()
-                                if name.lower() in CAPTURED_REQUEST_HEADERS
-                            },
-                            "form_fields": summarize_form_payload(request.post_data),
-                        }
-                    )
-
-                context.on("request", record_request)
-
-                def record_response(response: Any) -> None:
-                    if response.request.method != "POST" or not response.url.startswith("https://intranet.ideas.iii.org.tw:8242/"):
-                        return
-                    try:
-                        body = SENSITIVE_RESPONSE.sub(r"\1=[REDACTED]", response.text())
-                    except Exception:
-                        body = "[response body unavailable]"
-                    captured_responses.append(
-                        {
-                            "url": response.url,
-                            "status": response.status,
-                            "content_type": response.headers.get("content-type", ""),
-                            "body_summary": " ".join(body.split())[:1000],
-                        }
-                    )
-
-                context.on("response", record_response)
             page = context.pages[0] if context.pages else context.new_page()
             page.goto(MEETING_URL, wait_until="domcontentloaded")
             print("Complete login in the opened browser. The schedule will be saved automatically when it appears.")
@@ -333,20 +282,6 @@ def login_and_refresh(project_root: Path, *, capture_path: Path | None = None) -
                 timeout=300_000,
             )
             rows = _schedule_rows(context)
-            if capture_path:
-                print("Browser ready. Complete one reservation manually, then close this browser window.")
-                page.wait_for_event("close", timeout=0)
         finally:
             context.close()
-    if capture_path:
-        capture_path.parent.mkdir(parents=True, exist_ok=True)
-        capture_path.write_text(
-            json.dumps(
-                {"source_url": MEETING_URL, "requests": captured_requests, "responses": captured_responses},
-                ensure_ascii=False,
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
     return snapshot_from_rows(rows, source_url=MEETING_URL, retrieved_at=datetime.now(UTC).isoformat())

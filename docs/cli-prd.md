@@ -10,9 +10,8 @@ reservation, and cancelling one of the caller's reservations.
 | Command | Purpose | Side effects |
 | --- | --- | --- |
 | `dtri-meeting-room login` | Opens the isolated persistent Playwright browser, waits for manual authentication, then saves the current weekly room schedule. | Updates local snapshot and browser profile |
-| `dtri-meeting-room login --capture-reservation` | Keeps that browser open for one user-operated reservation and records a redacted POST request summary after the browser closes. | User creates reservation; updates local snapshot and private capture |
 | `dtri-meeting-room view [--refresh]` | Displays room occupancy from the local snapshot; `--refresh` updates it through the saved Playwright profile first. | `--refresh` updates local snapshot |
-| `dtri-meeting-room reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM>` | Shows the exact intended reservation and requests an explicit `YES` before submitting it. | Creates reservation after confirmation |
+| `dtri-meeting-room reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM> --confirm YES [--reason <reason>]` | Re-checks availability, discovers the current endpoint, then submits without prompts. | Creates reservation after explicit command confirmation |
 | `dtri-meeting-room cancel` | Lists the caller's reservations with short sequential numbers; asks for a selection and an explicit `YES` before cancellation. | Cancels reservation after confirmation |
 | `dtri-meeting-room install-skill <path\|codex\|antigravity\|claude>` | Installs the packaged `dtri-meeting-room` Agent Skill into a custom skills root or project-local platform preset. | Creates or replaces a local `SKILL.md` only with `--force`; `anthropic` is a compatibility alias for `claude` |
 
@@ -34,9 +33,9 @@ reservation, and cancelling one of the caller's reservations.
 - Both writes require uppercase `YES` immediately before the final request.
 - `reserve` interactively asks for a meeting reason; an empty response uses
   `工作進度討論`.
-- Reservation-flow capture records only method, URL, content type, and form
-  fields. It redacts authentication, `__VIEWSTATE`, and event-validation
-  fields and writes to ignored `data/reservation-flow.private.json`.
+- `reserve` discovers the deployment-generated `SaveBorrow` handler from the
+  currently loaded authenticated page for every submission. It never persists
+  an endpoint or a captured request.
 
 ## Explicit non-goals for MVP
 

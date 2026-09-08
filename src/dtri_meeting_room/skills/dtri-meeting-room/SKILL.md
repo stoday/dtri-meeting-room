@@ -26,7 +26,8 @@ description: 操作數位轉型研究院（數轉院）的內部會議室 CLI，
 
 ## 預約
 
-- `run_command` 是單次單向呼叫；預約時一律使用非互動命令，絕不可使用未附 `--confirm YES` 的 `reserve`。
+- `reserve` 是預約會議室的 CLI 指令，必須附 `--confirm YES` 才能送出。
+- 由於 `run_command` 是單次單向呼叫；預約時一律使用非互動命令，絕不可使用未附 `--confirm YES` 的 `reserve`。
 - 必須取得使用者明確的預約指示，以及 room ID、`YYYY-MM-DD` 日期與 `HH:MM-HH:MM` 時段；不得自行推定任一值。會議事由不是必要輸入，省略時使用預設值。
 - 未提供會議內容時，使用：`reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM> --confirm YES`。CLI 會以「工作進度討論」作為事由，且不得再要求使用者輸入任何內容。
 - 使用者已提供會議內容時，使用：`reserve <room-id> <YYYY-MM-DD> <HH:MM-HH:MM> --confirm YES --reason <會議內容>`。將每個參數分開放入 `arguments`，不加入 shell 引號。

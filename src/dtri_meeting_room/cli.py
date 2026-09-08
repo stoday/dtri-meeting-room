@@ -18,7 +18,6 @@ from .browser import (
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SNAPSHOT = ROOT / "data" / "current_week.json"
-DEFAULT_RESERVATION_CAPTURE = ROOT / "data" / "reservation-flow.private.json"
 SKILL_NAME = "dtri-meeting-room"
 SKILL_SOURCE = Path(__file__).parent / "skills" / SKILL_NAME / "SKILL.md"
 DEFAULT_RESERVATION_REASON = "工作進度討論"
@@ -73,11 +72,6 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     login = commands.add_parser("login", help="Open the isolated Playwright browser and refresh the weekly snapshot")
     login.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT, help="Where to save the refreshed JSON snapshot")
-    login.add_argument(
-        "--capture-reservation",
-        action="store_true",
-        help="Keep the browser open for one manual reservation and save a redacted request summary locally",
-    )
     login.set_defaults(handler=_login)
     view = commands.add_parser("view", help="Show occupancy from the local weekly snapshot")
     view.add_argument("--date", type=_iso_date, help="Limit output to a YYYY-MM-DD date")
@@ -106,11 +100,7 @@ def main() -> None:
 
 
 def _login(args: argparse.Namespace) -> None:
-    capture_path = DEFAULT_RESERVATION_CAPTURE if args.capture_reservation else None
-    snapshot = login_and_refresh(ROOT, capture_path=capture_path)
-    if capture_path:
-        snapshot = refresh_snapshot(ROOT)
-        print(f"Saved redacted reservation request summary to {capture_path}")
+    snapshot = login_and_refresh(ROOT)
     _save(args.snapshot, snapshot)
     print(f"Saved {len(snapshot['rooms'])} rooms to {args.snapshot}")
 

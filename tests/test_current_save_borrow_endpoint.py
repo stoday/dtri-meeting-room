@@ -6,7 +6,8 @@ class Page:
 
     def evaluate(self, _script: str) -> list[str]:
         return [
-            "AjaxPro.endpoint = '/ajax/_Default,App_Web_generated.ashx?_method=SaveBorrow&_session=rw';"
+            "https://intranet.example/ajax/_Default,App_Web_generated.ashx",
+            "https://intranet.example/ajax/Pub,App_Code.ashx",
         ]
 
 

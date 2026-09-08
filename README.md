@@ -94,23 +94,13 @@ dtri-meeting-room reserve 1002 2026-09-11 10:00-10:30 --confirm YES --reason "�
 3. 未指定 `--confirm YES` 時，詢問會議事由；直接按 Enter 會使用預設值 `工作進度討論`。
 4. 指定 `--confirm YES` 時不會進入互動模式，會直接送出；可用 `--reason "事由"` 指定事由，省略時使用 `工作進度討論`。
 5. 未指定 `--confirm YES` 時，顯示預約摘要後只有輸入精確的大寫 `YES` 才會繼續。
-6. 在同一個已登入瀏覽器環境中，依網站觀察到的順序執行規則檢核，再送出預約請求。
+6. 使用 persistent profile 更新目前可借狀態，從當前登入頁即時解析 deployment-generated `SaveBorrow` endpoint，依網站觀察到的順序執行規則檢核，再送出預約請求。
 
 預約請求使用網站實際觀察到的 Ajax 流程：先載入 `default.aspx`，執行兩輪 Rule 1／Rule 2 檢核（含預約分鐘數），最後才送出 `SaveBorrow`。網站回傳含有 `Borrowed` 表格（包含 Ajax 跳脫引號格式）時，CLI 會顯示預約成功。
 
 預約是實際寫入動作。沒有輸入 `YES` 不會送出任何預約；若規則檢核或最終回應不符合已知成功契約，CLI 不會自動重試，請先到網站確認結果。
 
-## 重新觀察網站預約流程
-
-若內部網站改版、預約失敗或需要重新擷取流程，可執行：
-
-```powershell
-dtri-meeting-room login --capture-reservation
-```
-
-登入後，在開啟的瀏覽器中手動完成一筆你確定要建立的預約，看到「預借成功」後按確認並關閉瀏覽器。程式會將去識別化的請求摘要寫入 `data/reservation-flow.private.json`，供程式使用目前的動態 `SaveBorrow` handler。
-
-這份私有檔案與瀏覽器設定檔都由 `.gitignore` 排除；其中不會記錄 cookie、token、密碼、`__VIEWSTATE` 或 event validation。更完整的觀察內容請見 [docs/reservation-api-observation.md](docs/reservation-api-observation.md)。
+`login` 只保存 persistent profile 並更新 snapshot；`reserve` 不依賴保存的 endpoint 或私有請求擷取檔案。每次預約都會從當前登入頁取得 handler，且不會輸出或保存 session、cookie 或 endpoint。
 
 ## 安裝 Agent Skill
 
