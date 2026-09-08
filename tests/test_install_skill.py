@@ -1,7 +1,7 @@
 from argparse import Namespace
 from pathlib import Path
 
-from p2026_meeting_room import cli
+from dtri_meeting_room import cli
 
 
 def test_custom_skill_destination_creates_a_named_skill_directory(tmp_path: Path) -> None:
@@ -14,7 +14,7 @@ def test_claude_and_anthropic_resolve_to_the_same_project_local_destination() ->
 
 def test_install_skill_copies_only_skill_markdown_and_refuses_overwrite(tmp_path: Path) -> None:
     original_source = cli.SKILL_SOURCE
-    cli.SKILL_SOURCE = Path(__file__).parents[1] / "src" / "p2026_meeting_room" / "skills" / "dtri-meeting-room" / "SKILL.md"
+    cli.SKILL_SOURCE = Path(__file__).parents[1] / "src" / "dtri_meeting_room" / "skills" / "dtri-meeting-room" / "SKILL.md"
     args = Namespace(destination=str(tmp_path), force=False)
     try:
         cli._install_skill(args)

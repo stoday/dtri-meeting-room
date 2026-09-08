@@ -5,7 +5,7 @@ from dtri_meeting_room.browser import ReservationPlan
 
 
 def test_confirm_yes_submits_with_default_reason_without_prompt(monkeypatch) -> None:
-    plan = ReservationPlan("801", "12", "2026-09-11", "10:00", "10:30", cli.DEFAULT_RESERVATION_REASON, "https://example.test")
+    plan = ReservationPlan("801", "12", "2026-09-11", "10:00", "10:30", cli.DEFAULT_RESERVATION_REASON)
     prepared: list[dict[str, object]] = []
     submitted: list[ReservationPlan] = []
 
@@ -22,7 +22,7 @@ def test_confirm_yes_submits_with_default_reason_without_prompt(monkeypatch) -> 
 
 def test_confirm_yes_uses_provided_reason_without_prompt(monkeypatch) -> None:
     reason = "客戶訪談"
-    plan = ReservationPlan("801", "12", "2026-09-11", "10:00", "10:30", reason, "https://example.test")
+    plan = ReservationPlan("801", "12", "2026-09-11", "10:00", "10:30", reason)
     prepared: list[dict[str, object]] = []
 
     monkeypatch.setattr(cli, "prepare_reservation", lambda _root, **kwargs: (prepared.append(kwargs), plan)[1])

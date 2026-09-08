@@ -1,4 +1,4 @@
-from p2026_meeting_room.browser import (
+from dtri_meeting_room.browser import (
     ReservationPlan,
     interval_is_available,
     reservation_preflight_requests,
@@ -8,7 +8,7 @@ from p2026_meeting_room.browser import (
 
 
 def test_reservation_payload_uses_observed_plain_text_wire_format() -> None:
-    plan = ReservationPlan("201", "22", "2026-09-08", "09:00", "09:30", "工作進度討論", "https://example.test/save")
+    plan = ReservationPlan("201", "22", "2026-09-08", "09:00", "09:30", "工作進度討論")
     assert reservation_payload(plan) == (
         "itemno=22\r\nborrow_date=2026/09/08\r\nstarttime=09:00\r\nendtime=09:30\r\n"
         "reason=工作進度討論\r\ncnt=0\r\nf_company=\r\nf_name=\r\nf_chk=false"
@@ -37,9 +37,9 @@ def test_preflight_replays_the_observed_rule_checks_and_duration() -> None:
         "09:30",
         "10:00",
         "reason",
-        "https://intranet.example/ajax/_Default,App_Web_generated.ashx?_method=SaveBorrow&_session=rw",
     )
-    checks = reservation_preflight_requests(plan)
+    endpoint = "https://intranet.example/ajax/_Default,App_Web_generated.ashx?_method=SaveBorrow&_session=rw"
+    checks = reservation_preflight_requests(plan, endpoint)
     assert [marker for _, _, marker in checks] == ["Rule1_Allow", "Rules2_Allow", "Rule1_Allow", "Rules2_Allow"]
     assert checks[0][1] == "borrow_date=2026/09/11"
     assert checks[1][1].endswith("estmin=0")
@@ -49,6 +49,6 @@ def test_preflight_replays_the_observed_rule_checks_and_duration() -> None:
 def test_preflight_uses_the_saveborrow_session_value_for_each_rule_check() -> None:
     plan = ReservationPlan(
         "1002", "119", "2026-09-11", "09:30", "10:00", "reason",
-        "https://intranet.example/ajax/_Default,App_Web_generated.ashx?_method=SaveBorrow&_session=custom",
     )
-    assert all("_session=custom" in endpoint for endpoint, _, _ in reservation_preflight_requests(plan))
+    endpoint = "https://intranet.example/ajax/_Default,App_Web_generated.ashx?_method=SaveBorrow&_session=custom"
+    assert all("_session=custom" in endpoint for endpoint, _, _ in reservation_preflight_requests(plan, endpoint))

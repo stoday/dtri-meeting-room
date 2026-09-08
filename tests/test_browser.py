@@ -1,4 +1,4 @@
-from p2026_meeting_room.browser import snapshot_from_rows
+from dtri_meeting_room.browser import snapshot_from_rows
 
 
 def test_snapshot_from_rows_extracts_rooms_and_periods() -> None:
